@@ -10,6 +10,7 @@ import sqlite3
 from PIL import Image
 from datetime import datetime
 from fpdf import FPDF
+import gdown
 
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
 
@@ -20,15 +21,28 @@ CLASS_FILE = os.path.join(BASE_DIR,"class_indices.json")
 DB_FILE = os.path.join(BASE_DIR,"history.db")
 EXAMPLE_FOLDER = os.path.join(BASE_DIR,"Examples")
 
+def download_model():
+    if not os.path.exists(MODEL_PATH):
+
+        url = "https://drive.google.com/uc?id=1akhIIwfWmp3aD-gGl9nGaoY9uRs2iorP"
+
+        st.write("Downloading AI model... please wait ⏳")
+
+        gdown.download(url, MODEL_PATH, quiet=False)
+
+download_model()
+
+
 @st.cache_resource
-def load_disease_model():
+def plant_disease_model():
+    tf.keras.backend.clear_session()
     return tf.keras.models.load_model(MODEL_PATH)
 
 @st.cache_resource
 def load_leaf_detector():
     return MobileNetV2(weights="imagenet")
 
-disease_model = load_disease_model()
+disease_model = plant_disease_model()
 leaf_model = load_leaf_detector()
 
 with open(CLASS_FILE) as f:
@@ -40,8 +54,9 @@ cur = conn.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS history(time TEXT,plant TEXT,disease TEXT,confidence REAL)")
 conn.commit()
 
-# Disease descriptions
+
 disease_info = {
+
 "Tomato Yellow Leaf Curl Virus":
 "A viral disease causing yellowing and curling of tomato leaves. It spreads through whiteflies and can significantly reduce crop yield.",
 
@@ -50,7 +65,9 @@ disease_info = {
 
 "Apple Scab":
 "A fungal disease that causes dark spots on apple leaves and fruits. It thrives in cool and wet climates."
+
 }
+
 
 def create_report(plant,disease,confidence,severity):
 
@@ -157,6 +174,7 @@ st.set_page_config(page_title="Plant Disease Predictor",layout="wide")
 
 st.markdown("""
 <style>
+
 .stApp {
 background: linear-gradient(135deg,#e6f9f0,#f0f9ff);
 }
@@ -181,6 +199,7 @@ color:white;
 }
 
 }
+
 </style>
 """,unsafe_allow_html=True)
 
@@ -189,10 +208,12 @@ st.title("🌿 Plant Disease Predictor")
 if "image" not in st.session_state:
     st.session_state.image=None
 
+
 input_choice=st.radio(
 "Select Image Source",
 ["Use Example Image","Upload Leaf Image","Camera"]
 )
+
 
 if "last_input" not in st.session_state:
     st.session_state.last_input=input_choice
@@ -202,7 +223,6 @@ if st.session_state.last_input!=input_choice:
     st.session_state.last_input=input_choice
 
 
-# Example images
 if input_choice=="Use Example Image":
 
     example_files=sorted(os.listdir(EXAMPLE_FOLDER))
@@ -213,7 +233,6 @@ if input_choice=="Use Example Image":
         st.session_state.image=Image.open(example_path).convert("RGB")
 
 
-# Upload image
 elif input_choice=="Upload Leaf Image":
 
     uploaded=st.file_uploader("Browse Leaf Image",type=["jpg","jpeg","png"])
@@ -222,7 +241,6 @@ elif input_choice=="Upload Leaf Image":
         st.session_state.image=Image.open(uploaded).convert("RGB")
 
 
-# Camera
 elif input_choice=="Camera":
 
     uploaded=st.camera_input("Take Leaf Photo")
@@ -232,6 +250,7 @@ elif input_choice=="Camera":
 
 
 image=st.session_state.image
+
 
 if image is not None:
 
@@ -297,11 +316,13 @@ if image is not None:
 
                 st.write(f"{p} — {d} : {c:.2f}%")
 
+
 st.subheader("Prediction History")
 
 hist=load_history()
 
 st.dataframe(hist,use_container_width=True)
+
 
 st.markdown("---")
 
