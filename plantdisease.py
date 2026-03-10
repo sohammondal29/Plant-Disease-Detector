@@ -21,6 +21,7 @@ CLASS_FILE = os.path.join(BASE_DIR,"class_indices.json")
 DB_FILE = os.path.join(BASE_DIR,"history.db")
 EXAMPLE_FOLDER = os.path.join(BASE_DIR,"Examples")
 
+# Download model if not present
 def download_model():
     if not os.path.exists(MODEL_PATH):
 
@@ -36,7 +37,7 @@ download_model()
 @st.cache_resource
 def plant_disease_model():
     tf.keras.backend.clear_session()
-    return tf.keras.models.load_model(MODEL_PATH)
+    return tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 @st.cache_resource
 def load_leaf_detector():
