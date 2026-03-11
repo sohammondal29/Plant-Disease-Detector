@@ -16,10 +16,10 @@ from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_i
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODEL_PATH = os.path.join(BASE_DIR, "plant_model_fixed.keras")
-CLASS_FILE = os.path.join(BASE_DIR, "class_indices.json")
-DB_FILE = os.path.join(BASE_DIR, "history.db")
-EXAMPLE_FOLDER = os.path.join(BASE_DIR, "Examples")
+MODEL_PATH = os.path.join(BASE_DIR,"plant_model_fixed.keras")
+CLASS_FILE = os.path.join(BASE_DIR,"class_indices.json")
+DB_FILE = os.path.join(BASE_DIR,"history.db")
+EXAMPLE_FOLDER = os.path.join(BASE_DIR,"Examples")
 
 FILE_ID = "1Ux5QuMerifSrgGYn-8gox__GfnYuoGjS"
 
@@ -38,29 +38,32 @@ download_model()
 
 
 @st.cache_resource
-def plant_disease_model():
+def load_disease_model():
+
     tf.keras.backend.clear_session()
-    return tf.keras.models.load_model(MODEL_PATH)
+
+    return tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 
 @st.cache_resource
-def load_leaf_detector():
+def plant_disease_model():
+
     return MobileNetV2(weights="imagenet")
 
 
-disease_model = plant_disease_model()
-leaf_model = load_leaf_detector()
+disease_model = load_disease_model()
+leaf_model = plant_disease_model()
 
 
 with open(CLASS_FILE) as f:
     class_indices = json.load(f)
 
 
-conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+conn = sqlite3.connect(DB_FILE,check_same_thread=False)
 cur = conn.cursor()
 
 cur.execute(
-    "CREATE TABLE IF NOT EXISTS history(time TEXT,plant TEXT,disease TEXT,confidence REAL)"
+"CREATE TABLE IF NOT EXISTS history(time TEXT,plant TEXT,disease TEXT,confidence REAL)"
 )
 
 conn.commit()
@@ -80,74 +83,79 @@ disease_info = {
 }
 
 
-def create_report(plant, disease, confidence, severity):
+def create_report(plant,disease,confidence,severity):
 
     pdf = FPDF()
+
     pdf.add_page()
 
-    pdf.set_font("Arial", size=14)
+    pdf.set_font("Arial",size=14)
 
-    pdf.cell(200, 10, "Plant Disease Diagnosis Report", ln=True, align="C")
+    pdf.cell(200,10,"Plant Disease Diagnosis Report",ln=True,align="C")
+
     pdf.ln(10)
 
-    pdf.cell(200, 10, f"Plant: {plant}", ln=True)
-    pdf.cell(200, 10, f"Disease: {disease}", ln=True)
-    pdf.cell(200, 10, f"Confidence: {confidence:.2f}%", ln=True)
-    pdf.cell(200, 10, f"Severity: {severity}", ln=True)
+    pdf.cell(200,10,f"Plant: {plant}",ln=True)
+    pdf.cell(200,10,f"Disease: {disease}",ln=True)
+    pdf.cell(200,10,f"Confidence: {confidence:.2f}%",ln=True)
+    pdf.cell(200,10,f"Severity: {severity}",ln=True)
 
     pdf.ln(10)
 
     if disease in disease_info:
-        pdf.multi_cell(0, 10, f"About the Disease:\n{disease_info[disease]}")
 
-    file = "report.pdf"
+        pdf.multi_cell(0,10,f"About the Disease:\n{disease_info[disease]}")
+
+    file="report.pdf"
+
     pdf.output(file)
 
     return file
 
 
-def preprocess_image(image, size=(224,224)):
+def preprocess_image(image,size=(224,224)):
 
-    image = image.resize(size)
-    img = np.array(image)
+    image=image.resize(size)
 
-    img = img.astype("float32") / 255.0
+    img=np.array(image)
 
-    img = np.expand_dims(img, axis=0)
+    img=img.astype("float32")/255.0
+
+    img=np.expand_dims(img,axis=0)
 
     return img
 
 
 def predict_disease(image):
 
-    img = preprocess_image(image)
+    img=preprocess_image(image)
 
-    pred = disease_model.predict(img, verbose=0)
+    pred=disease_model.predict(img,verbose=0)
 
-    index = np.argmax(pred)
+    index=np.argmax(pred)
 
-    conf = float(np.max(pred)) * 100
+    conf=float(np.max(pred))*100
 
-    label = class_indices[str(index)]
+    label=class_indices[str(index)]
 
-    return label, conf, pred
+    return label,conf,pred
 
 
 def detect_leaf(image):
 
-    img = image.resize((224,224))
+    img=image.resize((224,224))
 
-    arr = np.array(img)
+    arr=np.array(img)
 
-    arr = np.expand_dims(arr, axis=0)
+    arr=np.expand_dims(arr,axis=0)
 
-    arr = preprocess_input(arr)
+    arr=preprocess_input(arr)
 
-    preds = leaf_model.predict(arr, verbose=0)
+    preds=leaf_model.predict(arr,verbose=0)
 
-    decoded = decode_predictions(preds, top=5)[0]
+    decoded=decode_predictions(preds,top=5)[0]
 
-    plant_keywords = ["leaf","tree","plant","flower","corn","grape","apple"]
+    plant_keywords=["leaf","tree","plant","flower","corn","grape","apple"]
 
     for _,label,_ in decoded:
 
@@ -160,13 +168,13 @@ def detect_leaf(image):
     return False
 
 
-def save_history(plant, disease, conf):
+def save_history(plant,disease,conf):
 
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     cur.execute(
         "INSERT INTO history VALUES(?,?,?,?)",
-        (current_time, plant, disease, conf)
+        (current_time,plant,disease,conf)
     )
 
     conn.commit()
@@ -182,92 +190,98 @@ def load_history():
 
 def severity(image):
 
-    img = np.array(image)
+    img=np.array(image)
 
-    gray = np.mean(img, axis=2)
+    gray=np.mean(img,axis=2)
 
-    infected = np.sum(gray < 120)
+    infected=np.sum(gray<120)
 
-    total = gray.size
+    total=gray.size
 
-    ratio = infected / total
+    ratio=infected/total
 
-    if ratio < 0.1:
+    if ratio<0.1:
+
         return "Low"
 
-    elif ratio < 0.3:
+    elif ratio<0.3:
+
         return "Moderate"
 
     else:
+
         return "Severe"
 
 
-st.set_page_config(page_title="Plant Disease Predictor", layout="wide")
-
+st.set_page_config(page_title="Plant Disease Predictor",layout="wide")
 
 st.title("🌿 Plant Disease Predictor")
 
 
 if "image" not in st.session_state:
+
     st.session_state.image=None
 
 
-input_choice = st.radio(
-    "Select Image Source",
-    ["Use Example Image","Upload Leaf Image","Camera"]
+input_choice=st.radio(
+"Select Image Source",
+["Use Example Image","Upload Leaf Image","Camera"]
 )
 
 
 if "last_input" not in st.session_state:
-    st.session_state.last_input = input_choice
+
+    st.session_state.last_input=input_choice
 
 
-if st.session_state.last_input != input_choice:
+if st.session_state.last_input!=input_choice:
+
     st.session_state.image=None
+
     st.session_state.last_input=input_choice
 
 
 if input_choice=="Use Example Image":
 
-    example_files = sorted(os.listdir(EXAMPLE_FOLDER))
+    example_files=sorted(os.listdir(EXAMPLE_FOLDER))
 
-    selected_example = st.selectbox("Select Example", example_files)
+    selected_example=st.selectbox("Select Example",example_files)
 
     if selected_example:
 
-        example_path = os.path.join(EXAMPLE_FOLDER, selected_example)
+        example_path=os.path.join(EXAMPLE_FOLDER,selected_example)
 
-        st.session_state.image = Image.open(example_path).convert("RGB")
+        st.session_state.image=Image.open(example_path).convert("RGB")
 
 
 elif input_choice=="Upload Leaf Image":
 
-    uploaded = st.file_uploader("Browse Leaf Image", type=["jpg","jpeg","png"])
+    uploaded=st.file_uploader("Browse Leaf Image",type=["jpg","jpeg","png"])
 
     if uploaded:
 
-        st.session_state.image = Image.open(uploaded).convert("RGB")
+        st.session_state.image=Image.open(uploaded).convert("RGB")
 
 
 elif input_choice=="Camera":
 
-    uploaded = st.camera_input("Take Leaf Photo")
+    uploaded=st.camera_input("Take Leaf Photo")
 
     if uploaded:
 
-        st.session_state.image = Image.open(uploaded).convert("RGB")
+        st.session_state.image=Image.open(uploaded).convert("RGB")
 
 
-image = st.session_state.image
+image=st.session_state.image
 
 
 if image is not None:
 
-    col1, col2 = st.columns(2)
+    col1,col2=st.columns(2)
 
     with col1:
 
-        st.image(image, width=620)
+        st.image(image,width=620)
 
     with col2:
 
@@ -279,15 +293,15 @@ if image is not None:
 
             with st.spinner("🔍 Analyzing leaf disease..."):
 
-                label, conf, pred = predict_disease(image)
+                label,conf,pred=predict_disease(image)
 
-            plant, disease = label.split("___")
+            plant,disease=label.split("___")
 
-            disease = disease.replace("_"," ")
+            disease=disease.replace("_"," ")
 
-            sev = severity(image)
+            sev=severity(image)
 
-            save_history(plant, disease, conf)
+            save_history(plant,disease,conf)
 
             st.success(f"🌱 Plant : {plant}")
 
@@ -305,7 +319,7 @@ if image is not None:
 
             st.subheader("Download Report")
 
-            report = create_report(plant, disease, conf, sev)
+            report=create_report(plant,disease,conf,sev)
 
             with open(report,"rb") as file:
 
@@ -318,33 +332,33 @@ if image is not None:
 
             st.subheader("Top Predictions")
 
-            top3 = pred[0].argsort()[-3:][::-1]
+            top3=pred[0].argsort()[-3:][::-1]
 
             for i in top3:
 
-                name = class_indices[str(i)]
+                name=class_indices[str(i)]
 
-                p, d = name.split("___")
+                p,d=name.split("___")
 
-                d = d.replace("_"," ")
+                d=d.replace("_"," ")
 
-                c = pred[0][i] * 100
+                c=pred[0][i]*100
 
                 st.write(f"{p} — {d} : {c:.2f}%")
 
 
 st.subheader("Prediction History")
 
-hist = load_history()
+hist=load_history()
 
-st.dataframe(hist, use_container_width=True)
+st.dataframe(hist,use_container_width=True)
 
 
 st.markdown("---")
 
 st.markdown(
 """
-<div style='text-align: center; font-size:16px; margin-top:20px;'>
+<div style='text-align:center;font-size:16px;margin-top:20px;'>
 Created by <b>Soham Mondal</b><br>
 For any query contact <b>sohammondal29@gmail.com</b>
 </div>
