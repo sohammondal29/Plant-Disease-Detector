@@ -16,7 +16,7 @@ from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_i
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODEL_PATH = os.path.join(BASE_DIR,"plant_disease_prediction_model.h5")
+MODEL_PATH = os.path.join(BASE_DIR,"plant_model_fixed.keras")
 CLASS_FILE = os.path.join(BASE_DIR,"class_indices.json")
 DB_FILE = os.path.join(BASE_DIR,"history.db")
 EXAMPLE_FOLDER = os.path.join(BASE_DIR,"Examples")
@@ -336,3 +336,4 @@ For any query contact <b>sohammondal29@gmail.com</b>
 """,
 unsafe_allow_html=True
 )
+
