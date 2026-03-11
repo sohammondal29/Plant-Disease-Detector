@@ -1,5 +1,6 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
 import json
 import numpy as np
@@ -14,6 +15,7 @@ import gdown
 
 from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
 
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_PATH = os.path.join(BASE_DIR,"plant_model_fixed.keras")
@@ -23,19 +25,22 @@ EXAMPLE_FOLDER = os.path.join(BASE_DIR,"Examples")
 
 FILE_ID = "1Ux5QuMerifSrgGYn-8gox__GfnYuoGjS"
 
+
+# ---------------- DOWNLOAD MODEL ---------------- #
+
 def download_model():
 
     if not os.path.exists(MODEL_PATH):
 
         url = f"https://drive.google.com/uc?id={FILE_ID}"
 
-        print("Downloading AI model...")
-
-        gdown.download(url, MODEL_PATH, quiet=False)
-
+        with st.spinner("Downloading AI model (first run only)..."):
+            gdown.download(url, MODEL_PATH, quiet=False)
 
 download_model()
 
+
+# ---------------- LOAD MODELS ---------------- #
 
 @st.cache_resource
 def load_disease_model():
@@ -46,18 +51,22 @@ def load_disease_model():
 
 
 @st.cache_resource
-def plant_disease_model():
+def load_leaf_detector():
 
     return MobileNetV2(weights="imagenet")
 
 
 disease_model = load_disease_model()
-leaf_model = plant_disease_model()
+leaf_model = load_leaf_detector()
 
+
+# ---------------- LOAD CLASS FILE ---------------- #
 
 with open(CLASS_FILE) as f:
     class_indices = json.load(f)
 
+
+# ---------------- DATABASE ---------------- #
 
 conn = sqlite3.connect(DB_FILE,check_same_thread=False)
 cur = conn.cursor()
@@ -69,19 +78,23 @@ cur.execute(
 conn.commit()
 
 
+# ---------------- DISEASE INFORMATION ---------------- #
+
 disease_info = {
 
 "Tomato Yellow Leaf Curl Virus":
-"A viral disease causing yellowing and curling of tomato leaves. It spreads through whiteflies and can significantly reduce crop yield.",
+"A viral disease causing yellowing and curling of tomato leaves. It spreads through whiteflies and reduces crop yield.",
 
 "Potato Late Blight":
-"A fungal disease caused by Phytophthora infestans that creates dark lesions on leaves and spreads rapidly in humid environments.",
+"A fungal disease caused by Phytophthora infestans creating dark lesions on leaves and spreading rapidly in humid environments.",
 
 "Apple Scab":
-"A fungal disease that causes dark spots on apple leaves and fruits. It thrives in cool and wet climates."
+"A fungal disease that causes dark spots on apple leaves and fruits in cool wet climates."
 
 }
 
+
+# ---------------- REPORT GENERATION ---------------- #
 
 def create_report(plant,disease,confidence,severity):
 
@@ -103,7 +116,6 @@ def create_report(plant,disease,confidence,severity):
     pdf.ln(10)
 
     if disease in disease_info:
-
         pdf.multi_cell(0,10,f"About the Disease:\n{disease_info[disease]}")
 
     file="report.pdf"
@@ -112,6 +124,8 @@ def create_report(plant,disease,confidence,severity):
 
     return file
 
+
+# ---------------- IMAGE PROCESSING ---------------- #
 
 def preprocess_image(image,size=(224,224)):
 
@@ -158,15 +172,14 @@ def detect_leaf(image):
     plant_keywords=["leaf","tree","plant","flower","corn","grape","apple"]
 
     for _,label,_ in decoded:
-
         for word in plant_keywords:
-
             if word in label.lower():
-
                 return True
 
     return False
 
+
+# ---------------- DATABASE FUNCTIONS ---------------- #
 
 def save_history(plant,disease,conf):
 
@@ -188,6 +201,8 @@ def load_history():
     )
 
 
+# ---------------- SEVERITY ESTIMATION ---------------- #
+
 def severity(image):
 
     img=np.array(image)
@@ -201,25 +216,70 @@ def severity(image):
     ratio=infected/total
 
     if ratio<0.1:
-
         return "Low"
 
     elif ratio<0.3:
-
         return "Moderate"
 
     else:
-
         return "Severe"
 
 
+# ---------------- PAGE CONFIG ---------------- #
+
 st.set_page_config(page_title="Plant Disease Predictor",layout="wide")
+
+
+# ---------------- DARK UI THEME ---------------- #
+
+st.markdown("""
+<style>
+
+.stApp {
+background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:white;
+}
+
+h1 {
+text-align:center;
+font-weight:700;
+color:white;
+}
+
+h2, h3 {
+color:white;
+}
+
+label {
+color:white !important;
+}
+
+[data-testid="stMarkdownContainer"] {
+color:white;
+}
+
+.stButton>button {
+background-color:#00c9a7;
+color:white;
+border-radius:8px;
+}
+
+.stDownloadButton>button {
+background-color:#0077ff;
+color:white;
+border-radius:8px;
+}
+
+</style>
+""",unsafe_allow_html=True)
+
 
 st.title("🌿 Plant Disease Predictor")
 
 
-if "image" not in st.session_state:
+# ---------------- IMAGE INPUT ---------------- #
 
+if "image" not in st.session_state:
     st.session_state.image=None
 
 
@@ -227,18 +287,6 @@ input_choice=st.radio(
 "Select Image Source",
 ["Use Example Image","Upload Leaf Image","Camera"]
 )
-
-
-if "last_input" not in st.session_state:
-
-    st.session_state.last_input=input_choice
-
-
-if st.session_state.last_input!=input_choice:
-
-    st.session_state.image=None
-
-    st.session_state.last_input=input_choice
 
 
 if input_choice=="Use Example Image":
@@ -259,7 +307,6 @@ elif input_choice=="Upload Leaf Image":
     uploaded=st.file_uploader("Browse Leaf Image",type=["jpg","jpeg","png"])
 
     if uploaded:
-
         st.session_state.image=Image.open(uploaded).convert("RGB")
 
 
@@ -268,20 +315,20 @@ elif input_choice=="Camera":
     uploaded=st.camera_input("Take Leaf Photo")
 
     if uploaded:
-
         st.session_state.image=Image.open(uploaded).convert("RGB")
 
 
 image=st.session_state.image
 
 
+# ---------------- PREDICTION ---------------- #
+
 if image is not None:
 
     col1,col2=st.columns(2)
 
     with col1:
-
-        st.image(image,width=620)
+        st.image(image,width=500)
 
     with col2:
 
@@ -291,7 +338,7 @@ if image is not None:
 
         else:
 
-            with st.spinner("🔍 Analyzing leaf disease..."):
+            with st.spinner("Analyzing leaf disease..."):
 
                 label,conf,pred=predict_disease(image)
 
@@ -303,17 +350,17 @@ if image is not None:
 
             save_history(plant,disease,conf)
 
-            st.success(f"🌱 Plant : {plant}")
+            st.success(f"Plant: {plant}")
 
-            st.error(f"🦠 Disease : {disease}")
+            st.error(f"Disease: {disease}")
 
-            st.info(f"Confidence : {conf:.2f}%")
+            st.info(f"Confidence: {conf:.2f}%")
 
-            st.warning(f"Severity Level : {sev}")
-
-            st.subheader("About the Disease")
+            st.warning(f"Severity Level: {sev}")
 
             if disease in disease_info:
+
+                st.subheader("About the Disease")
 
                 st.write(disease_info[disease])
 
@@ -324,28 +371,14 @@ if image is not None:
             with open(report,"rb") as file:
 
                 st.download_button(
-                    label="📄 Download Diagnosis Report",
+                    label="Download Diagnosis Report",
                     data=file,
                     file_name="plant_disease_report.pdf",
                     mime="application/pdf"
                 )
 
-            st.subheader("Top Predictions")
 
-            top3=pred[0].argsort()[-3:][::-1]
-
-            for i in top3:
-
-                name=class_indices[str(i)]
-
-                p,d=name.split("___")
-
-                d=d.replace("_"," ")
-
-                c=pred[0][i]*100
-
-                st.write(f"{p} — {d} : {c:.2f}%")
-
+# ---------------- HISTORY ---------------- #
 
 st.subheader("Prediction History")
 
