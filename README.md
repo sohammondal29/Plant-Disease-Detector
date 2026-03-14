@@ -1,1 +1,1 @@
-Plant disease deletection system using deep learning
+Plant disease prediction system using deep learning
