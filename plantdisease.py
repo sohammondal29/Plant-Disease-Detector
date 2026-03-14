@@ -27,6 +27,7 @@ FILE_ID = "1akhIIwfWmp3aD-gGl9nGaoY9uRs2iorP"
 
 # ---------------- DOWNLOAD MODEL ---------------- #
 
+@st.cache_resource
 def download_model():
 
     if not os.path.exists(MODEL_PATH):
@@ -41,7 +42,6 @@ download_model()
 
 # ---------------- LOAD MODELS ---------------- #
 
-@st.cache_resource
 @st.cache_resource
 def load_disease_model():
 
@@ -58,7 +58,6 @@ def load_disease_model():
 
 @st.cache_resource
 def load_leaf_detector():
-
     return MobileNetV2(weights="imagenet")
 
 
@@ -310,8 +309,6 @@ if image is not None:
             st.warning(f"Severity Level: {sev}")
 
 
-            # ---------- TOP PREDICTIONS ----------
-
             st.subheader("Top Predictions")
 
             top3 = pred[0].argsort()[-3:][::-1]
@@ -327,8 +324,6 @@ if image is not None:
 
                 st.write(f"{p} — {d} : {c:.2f}%")
 
-
-            # ---------- REPORT ----------
 
             st.subheader("Download Report")
 
