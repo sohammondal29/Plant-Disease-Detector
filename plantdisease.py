@@ -308,7 +308,7 @@ def severity(image):
 
 # ---------------- HERO ----------------
 
-st.markdown("<h1><span class='accent'>Plant</span> Disease Predictor</h1>",unsafe_allow_html=True)
+st.markdown("<h1><span class='accent'>🌿 Plant</span> Disease Predictor</h1>",unsafe_allow_html=True)
 
 st.markdown(
 "<div class='tagline'>Scan a leaf. Detect the disease. Protect your plants.</div>",
